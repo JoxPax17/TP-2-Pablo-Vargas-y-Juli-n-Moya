@@ -1,6 +1,6 @@
 #Elaborado por: Pablo Vargas y Julian Moya
 #Fecha de creacion: 22-05-26 12:00 md
-#Ultima modificacion: 22-05-10 10:30 pm
+#Ultima modificacion: 22-05-26 10:30 pm
 #Versionn: 3.14.3
 import funciones
 import archivos
