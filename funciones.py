@@ -202,7 +202,7 @@ def generarDonador():
     telefono = str(primero) + resto[0:3] + "-" + resto[3:7]
     dominio = dominios[random.randint(0, len(dominios) - 1)]
     correo  = nombre.lower() + str(random.randint(10, 99)) + "@" + dominio
-    donador = {"cedula":cedula,"nombre":nombreCompleto,"fecha":fecha,"tipoSangre":tipoSangre,"sexo":sexo,"peso":peso"telefono":telefono,"correo":correo}
+    donador = {"cedula":cedula,"nombre":nombreCompleto,"fecha":fecha,"tipoSangre":tipoSangre,"sexo":sexo,"peso":peso,"telefono":telefono,"correo":correo}
     return donador
     
 def registrar():
