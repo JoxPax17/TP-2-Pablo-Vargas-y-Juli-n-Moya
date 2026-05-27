@@ -158,6 +158,52 @@ def mensajePeso(peso):
     if p < 120:
         return "Usted posee un peso adecuado, correcto para ser donador de sangre.", "green"
     return "Dado su sobre peso, no es posible donar sangre.", "red"
+
+def generarDonador():
+    """
+    Funcionalidad: Genera los datos completos de un donador de forma aleatoria.
+    Entrada: ninguna
+    Salida: diccionario con todos los datos del donador generado
+    """
+    nombres   = ["Julian", "Pablo", "Jose", "Ana", "Luis", "Laura", "Diego", "Sofia",
+                 "Andres", "Valeria", "Roberto", "Gabriela", "Fernando", "Isabella"]        
+    apellidos = ["Vargas", "Moya", "Aguilar", "Mora", "Jimenez", "Perez",
+                 "Lopez", "Garcia", "Fernandez", "Castro", "Quesada", "Salas"]
+    dominios  = ["gmail.com", "hotmail.com", "estudiantec.cr"]
+    primerosDigitosTel = [2, 4, 6, 7, 8, 9]
+    provincia = str(random.randint(1, 9)) # Cedula aleatoria valida
+    parte2    = str(random.randint(1000, 9999))
+    parte3    = str(random.randint(1000, 9999))
+    cedula    = provincia + "-" + parte2 + "-" + parte3
+    nombre    = nombres[random.randint(0, len(nombres) - 1)]   # Nombre completo aleatorio
+    apellido1 = apellidos[random.randint(0, len(apellidos) - 1)]
+    apellido2 = apellidos[random.randint(0, len(apellidos) - 1)]
+    nombreCompleto = nombre + " " + apellido1 + " " + apellido2
+    anno = random.randint(1950, 2010) #Fecha de nacimiento entre 1950 y 2010 para tener variedad de edades
+    mes  = random.randint(1, 12)
+    dia  = random.randint(1, 28) #puse 28 para evitar problemas con meses cortos como febrero
+    if dia < 10:
+        diaStr = "0" + str(dia)
+    else:
+        diaStr = str(dia)
+    if mes < 10:
+        mesStr = "0" + str(mes)
+    else:
+        mesStr = str(mes)
+    fecha = diaStr + "/" + mesStr + "/" + str(anno)
+    tipoSangre = tiposSangre[random.randint(0, len(TIPOS_SANGRE) - 1)]
+    if random.randint(0, 1) == 1:
+        sexo = "Masculino"
+    else:
+        sexo = "Femenino"
+    peso = round(random.randint(40, 130) + random.random(), 1)
+    primero  = primerosDigitosTel[random.randint(0, len(primerosDigitosTel) - 1)]
+    resto    = str(random.randint(1000000, 9999999))
+    telefono = str(primero) + resto[0:3] + "-" + resto[3:7]
+    dominio = dominios[random.randint(0, len(dominios) - 1)]
+    correo  = nombre.lower() + str(random.randint(10, 99)) + "@" + dominio
+    donador = {"cedula":cedula,"nombre":nombreCompleto,"fecha":fecha,"tipoSangre":tipoSangre,"sexo":sexo,"peso":peso"telefono":telefono,"correo":correo}
+    return donador
     
 def registrar():
     """
