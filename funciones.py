@@ -7,6 +7,29 @@
 import re
 import tkinter as tk
 from tkinter import ttk, messagebox
+import datetime
+import random
+
+provinciasDonacion = { "1": ["San José Centro", "Clínica Marcial Fallas", "Hospital México", "Hospital San Juan de Dios"], #diccionario lugares de donacion
+                       "2": ["Hospital Calderón Guardia", "Clínica Moravia", "Clínica Clorito Picado"],
+                       "3": ["Hospital San Rafael de Alajuela", "Clínica Carlos Durán"],
+                       "4": ["Hospital de Heredia", "Clínica Central de Heredia"],
+                       "5": ["Hospital Tony Facio - Limón", "Clínica Batan"],
+                       "6": ["Hospital Max Peralta - Cartago", "Clínica de Cartago"],
+                       "7": ["Hospital de Puntarenas", "Clínica de Puntarenas"],
+                       "8": ["Hospital de Liberia", "Hospital de La Anexión - Nicoya"],
+                       "9": ["Hospital de Ciudad Neily", "Clínica Corredores"],}
+
+compatibilidadSangre = {"O+":  "Puede donar a: O+, A+, B+, AB+.\nPuede recibir de: O+, O-.",
+                        "O-":  "Puede donar a: todos los tipos (donador universal).\nPuede recibir de: O-.",
+                        "A+":  "Puede donar a: A+, AB+.\nPuede recibir de: A+, A-, O+, O-.",
+                        "A-":  "Puede donar a: A+, A-, AB+, AB-.\nPuede recibir de: A-, O-.",
+                        "B+":  "Puede donar a: B+, AB+.\nPuede recibir de: B+, B-, O+, O-.",
+                        "B-":  "Puede donar a: B+, B-, AB+, AB-.\nPuede recibir de: B-, O-.",
+                        "AB+": "Puede donar a: AB+.\nPuede recibir de: todos los tipos (receptor universal).",
+                        "AB-": "Puede donar a: AB+, AB-.\nPuede recibir de: AB-, A-, B-, O-.",}
+
+tiposSangre = ("O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-")
 
 def validarCedula(cedula):
     """
@@ -90,7 +113,52 @@ def validarNombre(nombre):
     if re.match(patron, nombre.strip()) and nombre.strip() != "":
         return True
     return False
-
+    
+def esMayorDeEdad(fecha):
+    """
+    Funcionalidad: Verifica si la persona es mayor de edad (18 anos) comparando mes y anno exactos.
+    Entrada: fecha (str) en formato DD/MM/AAAA
+    Salida: True si es mayor de edad, False si no
+    """
+    partes = fecha.split("/")
+    dd   = int(partes[0])
+    mm   = int(partes[1])
+    aaaa = int(partes[2])
+    hoy  = datetime.date.today()        # trae la fecha actual del sistema (anno, mes, dia)
+    annos = hoy.year - aaaa             # diferencia de annos entre hoy y el nacimiento
+    if annos > 18:
+        return True
+    if annos == 18:
+        if mm < hoy.month:              # ya paso el mes del cumpleanos este anno
+            return True
+        if mm == hoy.month and dd <= hoy.day:   # mismo mes, ya llego o paso el dia
+            return True
+    return False
+ 
+def obtenerLugaresDonacion(cedula):
+    """
+    Funcionalidad: Extrae el primer digito de la cedula y retorna la lista de centros donde puede donar.
+    Entrada: cedula (str) en formato #-####-####
+    Salida: lista de strings con los lugares de donacion
+    """
+    codigoProvincia=cedula[0] #el primer caracter de la cedula es el codigo de provincia
+    if codigoProvincia in PROVINCIAS_DONACION:
+        return PROVINCIAS_DONACION[codigoProvincia]
+    return ["Lugar de donacion no identificado"]
+ 
+def mensajePeso(peso):
+    """
+    Funcionalidad: Retorna el mensaje y color correspondiente segun el peso del donador (3 casos posibles).
+    Entrada: peso (str o float)
+    Salida: mensaje (str), color (str)
+    """
+    p = float(peso)
+    if p <= 50:
+        return "Usted debe pesar mas de 50 kgms para poder ser donador.", "red"
+    if p < 120:
+        return "Usted posee un peso adecuado, correcto para ser donador de sangre.", "green"
+    return "Dado su sobre peso, no es posible donar sangre.", "red"
+    
 def registrar():
     """
     Funcionalidad: Valida todos los campos del formulario y registra al donador si son correctos.
