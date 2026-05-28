@@ -142,8 +142,8 @@ def obtenerLugaresDonacion(cedula):
     Salida: lista de strings con los lugares de donacion
     """
     codigoProvincia=cedula[0] #el primer caracter de la cedula es el codigo de provincia
-    if codigoProvincia in PROVINCIAS_DONACION:
-        return PROVINCIAS_DONACION[codigoProvincia]
+    if codigoProvincia in provinciasDonacion:
+        return provinciasDonacion[codigoProvincia]
     return ["Lugar de donacion no identificado"]
  
 def mensajePeso(peso):
@@ -191,7 +191,7 @@ def generarDonador():
     else:
         mesStr = str(mes)
     fecha = diaStr + "/" + mesStr + "/" + str(anno)
-    tipoSangre = tiposSangre[random.randint(0, len(TIPOS_SANGRE) - 1)]
+    tipoSangre = tiposSangre[random.randint(0, len(tiposSangre) - 1)]
     if random.randint(0, 1) == 1:
         sexo = "Masculino"
     else:
