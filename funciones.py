@@ -204,7 +204,84 @@ def generarDonador():
     correo  = nombre.lower() + str(random.randint(10, 99)) + "@" + dominio
     donador = {"cedula":cedula,"nombre":nombreCompleto,"fecha":fecha,"tipoSangre":tipoSangre,"sexo":sexo,"peso":peso,"telefono":telefono,"correo":correo}
     return donador
-    
+
+def mostrarInfoDonador(cedula, fecha, tipoSangre, peso):
+    """
+    Funcionalidad: Abre una ventana secundaria con el analisis del donador recien registrado:
+                   mayoria de edad, lugar de donacion, validacion de peso, compatibilidad
+                   de sangre y recomendacion especial si es tipo A+ o A-.
+    Entrada: cedula (str), fecha (str), tipoSangre (str), peso (str)
+    Salida: ninguna
+    """
+    ventanaInfo = tk.Toplevel() #Toplevel() abre una ventana secundaria SIN cerrar la principal
+    ventanaInfo.title("Informacion del donador")
+    ventanaInfo.resizable(False, False)
+    marcoInfo = tk.Frame(ventanaInfo, padx=25, pady=20) #contenedor con margenes internos
+    marcoInfo.pack()
+    tk.Label(marcoInfo, text="Analisis de su registro", font=("Arial", 13, "bold")).grid(
+        row=0, column=0, columnspan=2, pady=(0, 14))
+    fila = 1 #variable contadora de fila, la voy sumando de a 1 para no escribir el numero a mano en cada grid()
+    tk.Label(marcoInfo, text="1. Edad:", font=("Arial", 10, "bold"), anchor="w").grid(
+        row=fila, column=0, columnspan=2, sticky="w", pady=(4, 0))
+    fila += 1
+    if esMayorDeEdad(fecha):
+        msgEdad   = "Dado su fecha de nacimiento usted ya puede ser donador."
+        colorEdad = "green"
+    else:
+        msgEdad   = "Dado su fecha de nacimiento usted aun no puede ser donador."
+        colorEdad = "red"
+    tk.Label(marcoInfo, text=msgEdad, fg=colorEdad, wraplength=400, justify="left").grid(   #wraplength=400 hace salto de linea automatico si el texto es largo
+        row=fila, column=0, columnspan=2, sticky="w", padx=10)
+    fila += 1
+    tk.Frame(marcoInfo, height=1, bg="lightgray").grid(row=fila, column=0, columnspan=2, sticky="ew", pady=6)   #linea separadora gris
+    fila += 1
+    tk.Label(marcoInfo, text="2. Lugar de donacion:", font=("Arial", 10, "bold"), anchor="w").grid(
+        row=fila, column=0, columnspan=2, sticky="w", pady=(4, 0))
+    fila += 1
+    lugaresLista = obtenerLugaresDonacion(cedula) #retorna la lista de centros segun la provincia
+    lugaresTexto = ", ".join(lugaresLista) #.join() une la lista en un solo string separado por ", "
+    msgProvincia = ("Dado que usted nacio en la provincia de: " + cedula[0] + ", usted podria donar en: " + lugaresTexto + ".")
+    tk.Label(marcoInfo, text=msgProvincia, wraplength=400, justify="left").grid(
+        row=fila, column=0, columnspan=2, sticky="w", padx=10)
+    fila += 1
+    tk.Frame(marcoInfo, height=1, bg="lightgray").grid(row=fila, column=0, columnspan=2, sticky="ew", pady=6)
+    fila += 
+    tk.Label(marcoInfo, text="3. Validacion del peso:", font=("Arial", 10, "bold"), anchor="w").grid(
+        row=fila, column=0, columnspan=2, sticky="w", pady=(4, 0))
+    fila += 1
+    msgPeso, colorPeso = mensajePeso(peso) #la funcion retorna dos valores a la vez: el mensaje y el color
+    tk.Label(marcoInfo, text=msgPeso, fg=colorPeso, wraplength=400, justify="left").grid(
+        row=fila, column=0, columnspan=2, sticky="w", padx=10)
+    fila += 1
+    tk.Frame(marcoInfo, height=1, bg="lightgray").grid(row=fila, column=0, columnspan=2, sticky="ew", pady=6)
+    fila += 1
+    tk.Label(marcoInfo, text="4. Su tipo de sangre " + tipoSangre + ":", font=("Arial", 10, "bold"), anchor="w").grid(
+        row=fila, column=0, columnspan=2, sticky="w", pady=(4, 0))
+    fila += 1
+    if tipoSangre in compatibilidadSangre:
+        msgSangre = compatibilidadSangre[tipoSangre]
+    else:
+        msgSangre = "Informacion no disponible para este tipo de sangre."
+    tk.Label(marcoInfo, text=msgSangre, wraplength=400, justify="left").grid(
+        row=fila, column=0, columnspan=2, sticky="w", padx=10)
+    fila += 1
+    if tipoSangre == "A+" or tipoSangre == "A-":
+        tk.Frame(marcoInfo, height=1, bg="lightgray").grid(row=fila, column=0, columnspan=2, sticky="ew", pady=6)
+        fila += 1
+        tk.Label(marcoInfo, text="5. Recomendacion especial:", font=("Arial", 10, "bold"), anchor="w").grid(
+            row=fila, column=0, columnspan=2, sticky="w", pady=(4, 0))
+        fila += 1
+        msgVideo = ("Por tener sangre tipo " + tipoSangre + ", le recomendamos ver el video:\n"
+                    "\"Particularidades de la sangre tipo A: Responde diferente al estres segun la ciencia\".")
+        tk.Label(marcoInfo, text=msgVideo, fg="blue", wraplength=400, justify="left").grid(
+            row=fila, column=0, columnspan=2, sticky="w", padx=10)
+        fila += 1
+    #Boton para cerrar esta ventana y volver al formulario principal
+    tk.Frame(marcoInfo, height=1, bg="lightgray").grid(row=fila, column=0, columnspan=2, sticky="ew", pady=8)
+    fila += 1
+    tk.Button(marcoInfo, text="Regresar", width=12, command=ventanaInfo.destroy).grid(  #ventanaInfo.destroy cierra solo esta ventana secundaria, no la principal
+        row=fila, column=0, columnspan=2, pady=4)
+
 def registrar():
     """
     Funcionalidad: Valida todos los campos del formulario y registra al donador si son correctos.
