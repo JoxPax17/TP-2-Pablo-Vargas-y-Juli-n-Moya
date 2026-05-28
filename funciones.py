@@ -338,6 +338,7 @@ def registrar():
         "Telefono: " + telefono + "\n"
         "Correo: " + correo)
     messagebox.showinfo("Registro exitoso", mensaje) #showinfo muestra un popup normal (sin icono de error)
+    mostrarInfoDonador(cedula, fecha, tipoSangre, peso)
     limpiar()
     
 def limpiar():
