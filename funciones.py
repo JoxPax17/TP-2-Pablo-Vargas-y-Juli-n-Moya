@@ -245,7 +245,7 @@ def mostrarInfoDonador(cedula, fecha, tipoSangre, peso):
         row=fila, column=0, columnspan=2, sticky="w", padx=10)
     fila += 1
     tk.Frame(marcoInfo, height=1, bg="lightgray").grid(row=fila, column=0, columnspan=2, sticky="ew", pady=6)
-    fila += 
+    fila += 1
     tk.Label(marcoInfo, text="3. Validacion del peso:", font=("Arial", 10, "bold"), anchor="w").grid(
         row=fila, column=0, columnspan=2, sticky="w", pady=(4, 0))
     fila += 1
