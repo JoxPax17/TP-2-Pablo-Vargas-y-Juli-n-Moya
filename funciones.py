@@ -204,7 +204,85 @@ def generarDonador():
     correo  = nombre.lower() + str(random.randint(10, 99)) + "@" + dominio
     donador = {"cedula":cedula,"nombre":nombreCompleto,"fecha":fecha,"tipoSangre":tipoSangre,"sexo":sexo,"peso":peso,"telefono":telefono,"correo":correo}
     return donador
+  
+  def generarDonadores(baseDatos):
+    """
+    Funcionalidad: Abre una ventana grafica que solicita la cantidad de donadores a generar, los genera aleatoriamente, los agrega a la base de datos y realimenta al usuario al finalizar.
+    Entrada: baseDatos (lista de diccionarios)
+    Salida: baseDatos actualizada con los nuevos donadores
+    """
+    resultado = {"bd": baseDatos}  # diccionario para poder modificar baseDatos desde la funcion interna
+    ventana = tk.Toplevel()
+    ventana.title("Generar Donadores")
+    ventana.resizable(False, False)
+    marco = tk.Frame(ventana, padx=25, pady=20)
+    marco.pack()
+    tk.Label(marco, text="Generar Donadores", font=("Arial", 14, "bold")).grid(
+        row=0, column=0, columnspan=3, pady=(0, 12))
+    tk.Label(marco, text="Cantidad a generar", anchor="w", width=20).grid(
+        row=1, column=0, sticky="w", pady=4)
+    entryCantidad = tk.Entry(marco, width=10)
+    entryCantidad.grid(row=1, column=1, sticky="w", pady=4)
+    tk.Label(marco, text="Ej: 10  (minimo 1)", fg="gray").grid(
+        row=1, column=2, sticky="w", padx=8)
+    tk.Frame(marco, height=1, bg="lightgray").grid(
+        row=2, column=0, columnspan=3, sticky="ew", pady=8)
+    labelEstado = tk.Label(marco, text="", font=("Arial", 10), wraplength=380, justify="left")
+    labelEstado.grid(row=3, column=0, columnspan=3, sticky="w", pady=(4, 0))
 
+    def generar():
+        """
+        Funcionalidad: Valida la cantidad, genera los donadores y actualiza el estado en pantalla.
+        Entrada: ninguna (lee entryCantidad)
+        Salida: ninguna
+        """
+        cantidadStr = entryCantidad.get().strip()
+        if cantidadStr == "":
+            messagebox.showerror("Error", "Debe ingresar una cantidad.")
+            entryCantidad.focus()
+            return
+        try:
+            cantidad = int(cantidadStr)
+        except ValueError:
+            messagebox.showerror("Error", "La cantidad debe ser un numero entero.")
+            entryCantidad.focus()
+            return
+        if cantidad < 1:
+            messagebox.showerror("Error", "La cantidad debe ser al menos 1.")
+            entryCantidad.focus()
+            return
+
+        registrosAntes = len(resultado["bd"])
+        for i in range(cantidad):# genera y mete cada donador uno por uno
+            resultado["bd"].append(generarDonador())
+        registrosDespues = len(resultado["bd"])
+
+        labelEstado.config(
+            text="Proceso finalizado exitosamente.\n"
+                 "Donadores generados: " + str(cantidad) + "\n"
+                 "Registros antes:     " + str(registrosAntes) + "\n"
+                 "Registros ahora:     " + str(registrosDespues),
+            fg="green"
+        )
+        entryCantidad.delete(0, tk.END)
+        entryCantidad.focus()
+
+    def regresar():
+        """
+        Funcionalidad: Cierra la ventana y devuelve el control al menu principal.
+        Entrada: ninguna
+        Salida: ninguna
+        """
+        ventana.destroy()
+    marcoBotones = tk.Frame(marco)
+    marcoBotones.grid(row=4, column=0, columnspan=3, pady=10)
+    tk.Button(marcoBotones, text="Generar", width=12, command=generar).pack(side="left", padx=6)
+    tk.Button(marcoBotones, text="Regresar", width=12, command=regresar).pack(side="left", padx=6)
+
+    entryCantidad.focus()
+    ventana.wait_window()   # espera a que esta ventana se cierre antes de continuar con el codigo del menu principal
+    return resultado["bd"]
+    
 def mostrarInfoDonador(cedula, fecha, tipoSangre, peso):
     """
     Funcionalidad: Abre una ventana secundaria con el analisis del donador recien registrado:
