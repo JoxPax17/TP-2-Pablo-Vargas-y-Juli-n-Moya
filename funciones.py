@@ -374,6 +374,129 @@ def mostrarInfoDonador(cedula, fecha, tipoSangre, peso):
     tk.Button(marcoInfo, text="Regresar", width=12, command=ventanaInfo.destroy).grid(  #ventanaInfo.destroy cierra solo esta ventana secundaria, no la principal
         row=fila, column=0, columnspan=2, pady=4)
 
+def eliminarDonador(baseDatos):
+    """
+    Funcionalidad: Abre una ventana que solicita la cedula del donador a eliminar.
+                   Si no existe muestra un mensaje. Si existe muestra sus datos y
+                   solicita una justificacion via combobox antes de confirmar.
+                   El borrado es virtual: cambia el estado a 0 (inactivo).
+    Entrada: baseDatos (lista de diccionarios)
+    Salida: baseDatos actualizada
+    """
+    resultado = {"bd": baseDatos}   #diccionario para poder modificar baseDatos desde las funciones internas
+
+    ventanaEliminar = tk.Toplevel()     #Toplevel() abre ventana secundaria sin cerrar la principal
+    ventanaEliminar.title("Eliminar Donador")
+    ventanaEliminar.resizable(False, False)
+    marcoEliminar = tk.Frame(ventanaEliminar, padx=20, pady=15)
+    marcoEliminar.pack()
+
+    tk.Label(marcoEliminar, text="Eliminar Donador", font=("Arial", 14, "bold")).grid(
+        row=0, column=0, columnspan=3, pady=(0, 12))
+
+    #Fila de cedula para buscar
+    tk.Label(marcoEliminar, text="Cedula", anchor="w", width=18).grid(row=1, column=0, sticky="w", pady=4)
+    entryCedulaElim = tk.Entry(marcoEliminar, width=20)
+    entryCedulaElim.grid(row=1, column=1, sticky="w", pady=4)
+    tk.Label(marcoEliminar, text="Ej: 1-2345-6789", fg="gray").grid(row=1, column=2, sticky="w", padx=8)
+    tk.Button(marcoEliminar, text="Buscar", width=10,
+              command=lambda: buscarParaEliminar()).grid(row=1, column=3, padx=8)    #lambda para poder llamar la funcion sin argumentos
+
+    tk.Frame(marcoEliminar, height=2, bd=1, relief="sunken").grid(
+        row=2, column=0, columnspan=4, sticky="ew", pady=8)
+
+    #Marco donde aparece la info del donador y la justificacion despues de buscar
+    marcoDetalle = tk.Frame(marcoEliminar)
+    marcoDetalle.grid(row=3, column=0, columnspan=4, sticky="w")
+
+    def buscarParaEliminar():
+        """
+        Funcionalidad: Valida la cedula, verifica que exista en la BD y muestra los datos
+                       del donador junto con el combobox de justificacion.
+        Entrada: ninguna (lee entryCedulaElim)
+        Salida: ninguna
+        """
+        cedula = entryCedulaElim.get().strip()
+        if validarCedula(cedula) == False:
+            messagebox.showerror("Error", "Cedula invalida. Use el formato #-####-####")
+            return
+        #Buscar la cedula en la lista de diccionarios
+        donadorEncontrado = None
+        for donador in resultado["bd"]:
+            if donador["cedula"] == cedula:
+                donadorEncontrado = donador
+                break   #break detiene el loop en cuanto encuentra la cedula
+        if donadorEncontrado == None:
+            messagebox.showinfo("No encontrado",
+                "La persona con el numero de cedula: " + cedula +
+                " no esta registrado en la base de datos del Banco de Sangre aun.")
+            return
+        mostrarDetalleEliminar(donadorEncontrado)
+
+    def mostrarDetalleEliminar(donador):
+        """
+        Funcionalidad: Muestra los datos del donador encontrado y el combobox de justificacion.
+        Entrada: donador (dict) con los datos del donador
+        Salida: ninguna
+        """
+        for widget in marcoDetalle.winfo_children():    #limpia el marco antes de mostrar los nuevos datos
+            widget.destroy()
+        #Mostrar datos del donador en modo lectura
+        tk.Label(marcoDetalle, text="Datos del donador:", font=("Arial", 10, "bold"), anchor="w").grid(
+            row=0, column=0, columnspan=2, sticky="w", pady=(4, 2))
+        tk.Label(marcoDetalle, text="Cedula   : " + donador["cedula"], anchor="w").grid(
+            row=1, column=0, columnspan=2, sticky="w", padx=10)
+        tk.Label(marcoDetalle, text="Nombre   : " + donador["nombre"], anchor="w").grid(
+            row=2, column=0, columnspan=2, sticky="w", padx=10)
+        tk.Label(marcoDetalle, text="Tipo sangre: " + donador["tipoSangre"], anchor="w").grid(
+            row=3, column=0, columnspan=2, sticky="w", padx=10)
+        tk.Frame(marcoDetalle, height=1, bg="lightgray").grid(
+            row=4, column=0, columnspan=2, sticky="ew", pady=6)
+        #Combobox de justificacion con las 7 razones de GEMINI
+        tk.Label(marcoDetalle, text="Justificacion:", anchor="w", width=18).grid(
+            row=5, column=0, sticky="w", pady=4)
+        listaJustificaciones = []
+        for num in justificacionesEliminacion:                          #construye la lista de opciones del combobox
+            listaJustificaciones.append(str(num) + ". " + justificacionesEliminacion[num][:60] + "...")    #muestra los primeros 60 caracteres para que quepa en el combobox
+        comboJustificacion = ttk.Combobox(marcoDetalle, values=listaJustificaciones,
+                                          state="readonly", width=55)   #state="readonly" para que solo pueda elegir de la lista
+        comboJustificacion.grid(row=5, column=1, sticky="w", pady=4)
+        tk.Frame(marcoDetalle, height=1, bg="lightgray").grid(
+            row=6, column=0, columnspan=2, sticky="ew", pady=8)
+        #Botones de confirmar y regresar
+        marcoBotonesElim = tk.Frame(marcoDetalle)
+        marcoBotonesElim.grid(row=7, column=0, columnspan=2, pady=5)
+        tk.Button(marcoBotonesElim, text="Confirmar", width=12,
+                  command=lambda: confirmarEliminacion(donador, comboJustificacion)).pack(side="left", padx=6)  #lambda pasa el donador y el combobox como argumentos
+        tk.Button(marcoBotonesElim, text="Regresar", width=12,
+                  command=ventanaEliminar.destroy).pack(side="left", padx=6)
+
+    def confirmarEliminacion(donador, comboJustificacion):
+        """
+        Funcionalidad: Verifica que se haya elegido una justificacion, pide confirmacion
+                       y si el usuario acepta cambia el estado a 0 (borrado virtual).
+                       Si rechaza muestra mensaje y se mantiene en la ventana.
+        Entrada: donador (dict), comboJustificacion (widget Combobox)
+        Salida: ninguna
+        """
+        seleccion = comboJustificacion.get().strip()
+        if seleccion == "":
+            messagebox.showerror("Error", "Debe seleccionar una justificacion para eliminar al donador.")
+            return
+        numJustificacion = int(seleccion[0])    #seleccion[0] es el primer caracter del string, que es el numero
+        if not messagebox.askyesno("Confirmar", "Desea eliminar al donador " + donador["nombre"] + "?"):   #askyesno retorna True si confirma, False si no
+            messagebox.showinfo("Sin cambios", "Donador NO eliminado.")
+            return  #se mantiene en la misma ventana
+        #Borrado virtual: se cambia el estado a 0 y se guarda la justificacion
+        donador["estado"]        = 0                #0 = inactivo segun la estructura de la BD
+        donador["justificacion"] = numJustificacion #se guarda el numero de 1 a 7
+        #guardarBD(resultado["bd"])    #descomentar cuando tengan lista la funcion de archivos
+        messagebox.showinfo("Exito", "Donador eliminado satisfactoriamente.")
+        ventanaEliminar.destroy()   #cierra la ventana y regresa al menu principal
+
+    entryCedulaElim.focus()
+    ventanaEliminar.wait_window()   #espera a que esta ventana se cierre antes de continuar
+    return resultado["bd"]
 
 def insertarLugarDonacion():
     """
