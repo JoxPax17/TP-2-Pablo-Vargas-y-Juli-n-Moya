@@ -40,6 +40,8 @@ justificacionesEliminacion = {
     6: "Estilo de Vida y Viajes: Uso de drogas recreativas, consumo de alcohol en las ultimas 24 horas, o viajes recientes a zonas endemicas de malaria o dengue.",
     7: "Situaciones Especificas: Embarazo, lactancia o menstruacion (se evalua cada caso individualmente).",}
 
+nombresProvincia = {"1": "San Jose", "2": "Alajuela", "3": "Cartago", "4": "Heredia", "5": "Guanacaste", "6": "Puntarenas", "7": "Limon", "8": "San Jose (Naturalizados)",}
+
 def validarCedula(cedula):
     """
     Funcionalidad: Valida que la cedula tenga el formato #-####-#### y que el primer digito no sea 0.
@@ -615,6 +617,75 @@ def insertarLugarDonacion():
     tk.Button(marcoBotonesLugar, text="Insertar", width=12, command=insertarLugar).pack(side="left", padx=6)    #command llama insertarLugar al hacer clic
     tk.Button(marcoBotonesLugar, text="Salir", width=12, command=ventanaLugar.destroy).pack(side="left", padx=6)    #Salir cierra la ventana y devuelve al menu inicial
 
+def calcularEdad(fecha):
+    """
+    Funcionalidad: Calcula la edad en anos de una persona a partir de su fecha de nacimiento.
+    Entrada: fecha (str) en formato DD/MM/AAAA
+    Salida: edad en anos (int)
+    """
+    partes = fecha.split("/")
+    dd   = int(partes[0])
+    mm   = int(partes[1])
+    aaaa = int(partes[2])
+    hoy  = datetime.date.today()        #fecha actual del sistema
+    edad = hoy.year - aaaa
+    if mm > hoy.month:                  #todavia no ha cumplido anos este anno
+        edad -= 1
+    elif mm == hoy.month and dd > hoy.day:
+        edad -= 1
+    return edad
+
+def generarPlantillaHTML(titulo, filas, columnas):
+    """
+    Funcionalidad: Genera el contenido HTML5 completo de un reporte de donadores.
+    Entrada: titulo (str) titulo del reporte,
+             filas (lista de listas) cada sublista es una fila de datos,
+             columnas (lista de str) nombres de las columnas de la tabla
+    Salida: string con el HTML completo
+    """
+    ahora = datetime.datetime.now()                 #datetime.datetime.now() trae fecha y hora actual del sistema
+    fechaHora = ahora.strftime("%d/%m/%Y %H:%M:%S") #strftime formatea la fecha/hora como string con el patron indicad
+    filasHTML = "" # para las filas de la tabla
+    for fila in filas:
+        filasHTML = filasHTML + "        <tr>\n"
+        for celda in fila:
+            filasHTML = filasHTML + "            <td>" + str(celda) + "</td>\n"
+        filasHTML = filasHTML + "        </tr>\n"
+      encabezadosHTML = ""
+    for col in columnas:
+        encabezadosHTML = encabezadosHTML + "            <th>" + col + "</th>\n" #para encabezadfos
+    html = ("<!DOCTYPE html>\n"
+            "<html lang=\"es\">\n"
+            "<head>\n"
+            "    <meta charset=\"utf-8\" />\n"
+            "    <title>" + titulo + "</title>\n"
+            "    <style>\n"
+            "        body { font-family: Arial, sans-serif; margin: 30px; }\n"
+            "        h1 { color: #8B0000; }\n"
+            "        p { color: #555; }\n"
+            "        table { border-collapse: collapse; width: 100%; margin-top: 20px; }\n"
+            "        th { background-color: #8B0000; color: white; padding: 10px; text-align: left; }\n"
+            "        td { padding: 8px 10px; border-bottom: 1px solid #ddd; }\n"
+            "        tr:nth-child(even) { background-color: #f9f9f9; }\n"  #nth-child(even) colorea filas pares
+            "    </style>\n"
+            "</head>\n"
+            "<body>\n"
+            "    <h1>" + titulo + "</h1>\n"
+            "    <p>Fecha y hora del sistema: " + fechaHora + "</p>\n"
+            "    <table>\n"
+            "        <thead>\n"
+            "            <tr>\n"
+            + encabezadosHTML +
+            "            </tr>\n"
+            "        </thead>\n"
+            "        <tbody>\n"
+            + filasHTML +
+            "        </tbody>\n"
+            "    </table>\n"
+            "</body>\n"
+            "</html>\n")
+    return html
+
 def guardarHTML(contenidoHTML, nombreArchivo):
     """
     Funcionalidad: Guarda el contenido HTML en un archivo en la misma carpeta del programa.
@@ -629,6 +700,143 @@ def guardarHTML(contenidoHTML, nombreArchivo):
         return ruta
     except:
         return None
+
+def reporteDonantePorProvincia(baseDatos):
+    """
+    Funcionalidad: Abre una ventana con un combobox de provincia. Al generar el reporte,
+                   filtra los donantes activos de esa provincia (segun el primer digito de
+                   la cedula), los ordena por nombre completo y genera un archivo HTML5.
+    Entrada: baseDatos (lista de diccionarios)
+    Salida: ninguna
+    """
+    ventanaReporte = tk.Toplevel()      #Toplevel() abre ventana secundaria sin cerrar la principal
+    ventanaReporte.title("Reporte: Donantes por provincia")
+    ventanaReporte.resizable(False, False)
+    marcoReporte = tk.Frame(ventanaReporte, padx=20, pady=15)
+    marcoReporte.pack()
+ 
+    tk.Label(marcoReporte, text="Donantes por Provincia", font=("Arial", 14, "bold")).grid(
+        row=0, column=0, columnspan=2, pady=(0, 12))
+ 
+    #Combobox de provincia leido del diccionario global nombresProvincia
+    tk.Label(marcoReporte, text="Provincia:", anchor="w", width=18).grid(row=1, column=0, sticky="w", pady=4)
+    listaOpciones = []
+    for codigo in nombresProvincia:
+        listaOpciones.append(codigo + " - " + nombresProvincia[codigo])
+    comboProv = ttk.Combobox(marcoReporte, values=listaOpciones, state="readonly", width=28)    #state="readonly" para que solo pueda elegir de la lista
+    comboProv.grid(row=1, column=1, sticky="w", pady=4)
+ 
+    tk.Frame(marcoReporte, height=2, bd=1, relief="sunken").grid(
+        row=2, column=0, columnspan=2, sticky="ew", pady=10)
+ 
+    labelResultado = tk.Label(marcoReporte, text="", wraplength=380, justify="left")
+    labelResultado.grid(row=3, column=0, columnspan=2, sticky="w", pady=4)
+ 
+    def generarReporte():
+        """
+        Funcionalidad: Filtra los donantes activos de la provincia seleccionada,
+                       los ordena por nombre y genera el HTML.
+        Entrada: ninguna (lee comboProv)
+        Salida: ninguna
+        """
+        seleccion = comboProv.get().strip()
+        if seleccion == "":
+            messagebox.showerror("Error", "Debe seleccionar una provincia.")
+            return
+        codigoProv = seleccion[0]   #primer caracter = codigo de provincia
+ 
+        #Filtrar donantes activos de esa provincia
+        donantes = []
+        for d in baseDatos:
+            if d.get("cedula", "")[0] == codigoProv and d.get("estado", 1) == 1:   #.get() con valor por defecto evita KeyError si el campo no existe
+                donantes.append(d)
+ 
+        #Ordenar por nombre completo usando bubble sort para no usar sorted()
+        i = 0
+        while i < len(donantes) - 1:
+            j = 0
+            while j < len(donantes) - 1 - i:
+                if donantes[j]["nombre"] > donantes[j + 1]["nombre"]:   #comparacion de strings alfabetica
+                    temp = donantes[j]
+                    donantes[j] = donantes[j + 1]
+                    donantes[j + 1] = temp
+                j += 1
+            i += 1
+ 
+        #Construir filas para el HTML
+        filas = []
+        for d in donantes:
+            filas.append([d["cedula"], d["nombre"], d["fecha"], d["telefono"], d["correo"]])
+ 
+        columnas = ["Cedula", "Nombre Completo", "Fecha de Nacimiento", "Telefono", "Correo"]
+        titulo   = "Donantes por provincia: " + nombresProvincia.get(codigoProv, codigoProv)
+        html     = generarPlantillaHTML(titulo, filas, columnas)
+        ruta     = guardarHTML(html, "donantes_provincia_" + codigoProv)
+ 
+        if ruta != None:
+            labelResultado.config(text="Reporte creado satisfactoriamente.\nArchivo: " + ruta, fg="green")
+        else:
+            labelResultado.config(text="Reporte no creado.", fg="red")
+ 
+    #Botones
+    marcoBotones = tk.Frame(marcoReporte)
+    marcoBotones.grid(row=4, column=0, columnspan=2, pady=8)
+    tk.Button(marcoBotones, text="Generar reporte", width=16, command=generarReporte).pack(side="left", padx=6)     #command llama generarReporte al hacer clic
+    tk.Button(marcoBotones, text="Regresar", width=12, command=ventanaReporte.destroy).pack(side="left", padx=6)    #cierra esta ventana y vuelve al submenu de reportes
+ 
+def reportePorRangoEdad(baseDatos):
+    """
+    Funcionalidad: Abre una ventana con dos cajas de texto para edad inicial y final.
+                   La segunda caja se activa solo si la primera tiene un valor valido.
+                   Filtra donantes activos dentro del rango (18-65 anos) y genera HTML5.
+    Entrada: baseDatos (lista de diccionarios)
+    Salida: ninguna
+    """
+    ventanaReporte = tk.Toplevel()
+    ventanaReporte.title("Reporte: Por rango de edad")
+    ventanaReporte.resizable(False, False)
+    marcoReporte = tk.Frame(ventanaReporte, padx=20, pady=15)
+    marcoReporte.pack()
+ 
+    tk.Label(marcoReporte, text="Reporte por Rango de Edad", font=("Arial", 14, "bold")).grid(
+        row=0, column=0, columnspan=3, pady=(0, 12))
+ 
+    #Edad inicial
+    tk.Label(marcoReporte, text="Edad inicial:", anchor="w", width=14).grid(row=1, column=0, sticky="w", pady=4)
+    entryEdadInicial = tk.Entry(marcoReporte, width=8)
+    entryEdadInicial.grid(row=1, column=1, sticky="w", pady=4)
+    tk.Label(marcoReporte, text="(18 a 65)", fg="gray").grid(row=1, column=2, sticky="w", padx=6)
+ 
+    #Edad final, empieza deshabilitada hasta que la inicial sea valida
+    tk.Label(marcoReporte, text="Edad final:", anchor="w", width=14).grid(row=2, column=0, sticky="w", pady=4)
+    entryEdadFinal = tk.Entry(marcoReporte, width=8, state="disabled")  #state="disabled" deshabilita el campo
+    entryEdadFinal.grid(row=2, column=1, sticky="w", pady=4)
+    tk.Label(marcoReporte, text="(18 a 65)", fg="gray").grid(row=2, column=2, sticky="w", padx=6)
+ 
+    tk.Frame(marcoReporte, height=2, bd=1, relief="sunken").grid(
+        row=3, column=0, columnspan=3, sticky="ew", pady=10)
+ 
+    labelResultado = tk.Label(marcoReporte, text="", wraplength=380, justify="left")
+    labelResultado.grid(row=4, column=0, columnspan=3, sticky="w", pady=4)
+ 
+    def validarEdadInicial(evento):
+        """
+        Funcionalidad: Se ejecuta cada vez que el usuario sale del campo edad inicial.
+                       Si el valor es valido habilita la caja de edad final.
+        Entrada: evento (requerido por tkinter para el bind)
+        Salida: ninguna
+        """
+        texto = entryEdadInicial.get().strip()
+        if re.match(r'^\d+$', texto): #verifica que solo tenga digitos
+            edad = int(texto)
+            if edad >= 18 and edad <= 65:
+                entryEdadFinal.config(state="normal") #state="normal" habilita el campo
+                entryEdadFinal.focus()
+                return
+        entryEdadFinal.config(state="disabled") #si no es valido se deshabilita de nuevo
+        entryEdadFinal.delete(0, tk.END)
+ 
+    entryEdadInicial.bind("<FocusOut>", validarEdadInicial) #FocusOut usa la funcion cuando el usuario sale del campo
 
 def registrar():
     """
