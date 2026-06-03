@@ -837,7 +837,139 @@ def reportePorRangoEdad(baseDatos):
         entryEdadFinal.delete(0, tk.END)
  
     entryEdadInicial.bind("<FocusOut>", validarEdadInicial) #FocusOut usa la funcion cuando el usuario sale del campo
+def reportePorTipoSangreProvincia(baseDatos):
+    """
+    Funcionalidad: Abre una ventana con un combobox de tipo de sangre y otro de provincia. Al generar el reporte, filtra los donantes activos que coincidan con ambos criterios y genera un archivo HTML5.
+    Entrada: baseDatos (lista de diccionarios)
+    Salida: ninguna
+    """
+    ventanaReporte = tk.Toplevel() #Toplevel() abre ventana secundaria sin cerrar la principal
+    ventanaReporte.title("Reporte: Por tipo de sangre y provincia")
+    ventanaReporte.resizable(False, False)
+    marcoReporte = tk.Frame(ventanaReporte, padx=20, pady=15)
+    marcoReporte.pack()
 
+    tk.Label(marcoReporte, text="Por Tipo de Sangre y Provincia",font=("Arial", 14, "bold")).grid(row=0, column=0, columnspan=2, pady=(0, 12))
+
+    #Tipo de sangre leido desde la tupla global tiposSangre
+    tk.Label(marcoReporte, text="Tipo de sangre:", anchor="w", width=18).grid(row=1, column=0, sticky="w", pady=4)
+    comboSangre = ttk.Combobox(marcoReporte, values=list(tiposSangre), state="readonly", width=10) #list() convierte la tupla en lista para el combobox
+    comboSangre.grid(row=1, column=1, sticky="w", pady=4)
+
+    #provincia leido del diccionario global nombresProvincia
+    tk.Label(marcoReporte, text="Provincia:", anchor="w", width=18).grid(row=2, column=0, sticky="w", pady=4)
+    listaOpciones = []
+    for codigo in nombresProvincia:
+        listaOpciones.append(codigo + " - " + nombresProvincia[codigo])
+    comboProv = ttk.Combobox(marcoReporte, values=listaOpciones,state="readonly", width=28)
+    comboProv.grid(row=2, column=1, sticky="w", pady=4)
+
+    tk.Frame(marcoReporte, height=2, bd=1, relief="sunken").grid(row=3, column=0, columnspan=2, sticky="ew", pady=10)
+
+    labelResultado = tk.Label(marcoReporte, text="", wraplength=380, justify="left")
+    labelResultado.grid(row=4, column=0, columnspan=2, sticky="w", pady=4)
+
+    def generarReporte():
+        """
+        Funcionalidad: Valida que se hayan seleccionado ambos filtros, filtra los donantes activos por tipo de sangre y provincia, y genera el HTML.
+        Entrada: ninguna (lee comboSangre y comboProv)
+        Salida: ninguna
+        """
+        tipoSeleccionado = comboSangre.get().strip()
+        seleccionProv = comboProv.get().strip()
+        if tipoSeleccionado == "" or seleccionProv == "":
+            messagebox.showerror("Error", "Debe seleccionar tipo de sangre y provincia.")
+            return
+        codigoProv = seleccionProv[0] #primer caracter del string = codigo de provincia
+        donantes = []
+        for d in baseDatos:
+            if (d.get("cedula", "")[0] == codigoProv 
+                    and d.get("estado", 1) == 1        #1 = activo segun la estructura de la BD
+                    and d.get("tipoSangre", "") == tipoSeleccionado):
+                donantes.append(d)
+#Aqui hace las filas del HTML con los datos de los donantes filtrados
+        filas = []
+        for d in donantes:
+            filas.append([d["cedula"], d["nombre"], d["fecha"],
+                          d["telefono"], d["correo"]])
+        columnas = ["Cedula", "Nombre Completo", "Fecha de Nacimiento", "Telefono", "Correo"]
+        titulo = ("Donantes tipo " + tipoSeleccionado + " en "
+                  + nombresProvincia.get(codigoProv, codigoProv)) #.get() por si el codigo no esta en el diccionario
+        html = generarPlantillaHTML(titulo, filas, columnas)
+        ruta = guardarHTML(html, "donantes_sangre_"
+                           + tipoSeleccionado.replace("+", "pos").replace("-", "neg") #el nombre del archivo reemplaza + y - para evitar caracteres especiales
+                           + "_prov" + codigoProv)
+        if ruta != None:
+            labelResultado.config(
+                text="Reporte creado satisfactoriamente.\nArchivo: " + ruta, fg="green")
+        else:
+            labelResultado.config(text="Reporte no creado.", fg="red")
+    marcoBotones = tk.Frame(marcoReporte)
+    marcoBotones.grid(row=5, column=0, columnspan=2, pady=8)
+    tk.Button(marcoBotones, text="Generar reporte", width=16,
+              command=generarReporte).pack(side="left", padx=6) #command llama generarReporte al hacer clic
+    tk.Button(marcoBotones, text="Regresar", width=12,
+              command=ventanaReporte.destroy).pack(side="left", padx=6) #cierra ventana y vuelve al submenu
+
+def reporteListaCompleta(baseDatos):
+    """
+    Funcionalidad: Genera automaticamente el reporte de todos los donantes activos al abrir la ventana, ordenados por provincia ascendentemente. Todos los 14 de junio se usa para mandar mensajes de agradecimiento.
+    Entrada: baseDatos (lista de diccionarios)
+    Salida: ninguna
+    """
+    ventanaReporte = tk.Toplevel()
+    ventanaReporte.title("Reporte: Lista completa de donadores")
+    ventanaReporte.resizable(False, False)
+    marcoReporte = tk.Frame(ventanaReporte, padx=20, pady=15)
+    marcoReporte.pack()
+    tk.Label(marcoReporte, text="Lista Completa de Donadores",
+             font=("Arial", 14, "bold")).grid(row=0, column=0, pady=(0, 12))
+    labelResultado = tk.Label(marcoReporte, text="", wraplength=380, justify="left")
+    labelResultado.grid(row=1, column=0, sticky="w", pady=4)
+
+    def generarReporte():
+        """
+        Funcionalidad: Filtra todos los donantes activos, los ordena por provincia con bubble sort y genera el archivo HTML5.
+        Entrada: ninguna
+        Salida: ninguna
+        """
+        #Filtrar solo donantes activos
+        donantes = []
+        for d in baseDatos:
+            if d.get("estado", 1) == 1:
+                donantes.append(d)
+        #Ordenar por provincia (primer digito de la cedula)
+        i = 0
+        while i < len(donantes) - 1:
+            j = 0
+            while j < len(donantes) - 1 - i:
+                if donantes[j]["cedula"][0] > donantes[j + 1]["cedula"][0]: #comparacion de codigos de provincia
+                    temp = donantes[j]
+                    donantes[j] = donantes[j + 1]
+                    donantes[j + 1] = temp
+                j += 1
+            i += 1
+        filas = []
+        for d in donantes:
+            sexoTexto = "Masculino" if d.get("sexo", "Masculino") == "Masculino" else "Femenino"
+            filas.append([d["cedula"], d["nombre"], d.get("tipoSangre", ""),
+                          d["fecha"], d.get("peso", ""), sexoTexto,
+                          d["telefono"], d["correo"]])
+        columnas = ["Cedula", "Nombre Completo", "Tipo de Sangre",
+                    "Fecha de Nacimiento", "Peso", "Sexo", "Telefono", "Correo"]
+        html = generarPlantillaHTML("Lista Completa de Donadores", filas, columnas)
+        ruta = guardarHTML(html, "lista_completa_donadores")
+        if ruta != None:
+            labelResultado.config(
+                text="Reporte creado satisfactoriamente.\nArchivo: " + ruta, fg="green")
+        else:
+            labelResultado.config(text="Reporte no creado.", fg="red")
+    generarReporte()
+    #Solo boton de regresar porque el reporte se genera automaticamente
+    marcoBotones = tk.Frame(marcoReporte)
+    marcoBotones.grid(row=2, column=0, pady=8)
+    tk.Button(marcoBotones, text="Regresar", width=12,
+              command=ventanaReporte.destroy).pack() #cierra ventana y vuelve al submenu
 def registrar():
     """
     Funcionalidad: Valida todos los campos del formulario y registra al donador si son correctos.
