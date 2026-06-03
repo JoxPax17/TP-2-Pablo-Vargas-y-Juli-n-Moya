@@ -615,6 +615,21 @@ def insertarLugarDonacion():
     tk.Button(marcoBotonesLugar, text="Insertar", width=12, command=insertarLugar).pack(side="left", padx=6)    #command llama insertarLugar al hacer clic
     tk.Button(marcoBotonesLugar, text="Salir", width=12, command=ventanaLugar.destroy).pack(side="left", padx=6)    #Salir cierra la ventana y devuelve al menu inicial
 
+def guardarHTML(contenidoHTML, nombreArchivo):
+    """
+    Funcionalidad: Guarda el contenido HTML en un archivo en la misma carpeta del programa.
+    Entrada: contenidoHTML (str), nombreArchivo (str) nombre del archivo sin extension
+    Salida: ruta del archivo creado (str) o None si hubo error
+    """
+    try:
+        ruta = nombreArchivo + ".html"
+        archivo = open(ruta, "w", encoding="utf-8")     #se abre en modo "w" (write) para escribir, encoding utf-8 para las tildes
+        archivo.write(contenidoHTML)
+        archivo.close()
+        return ruta
+    except:
+        return None
+
 def registrar():
     """
     Funcionalidad: Valida todos los campos del formulario y registra al donador si son correctos.
