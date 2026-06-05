@@ -1,6 +1,6 @@
 #Elaborado por Pablo Vargas y Julian Moya
 #Fecha de creacion 23-05-26 6:00 pm
-#Ultima modificacion 01-06-26
+#Ultima modificacion 04-06-26 11:10 pm
 #Version: 3.14.5
 
 #Definicion de funciones
@@ -297,8 +297,6 @@ def generarDonadores(baseDatos):
 def mostrarInfoDonador(cedula, fecha, tipoSangre, peso):
     """
     Funcionalidad: Abre una ventana secundaria con el analisis del donador recien registrado:
-                   mayoria de edad, lugar de donacion, validacion de peso, compatibilidad
-                   de sangre y recomendacion especial si es tipo A+ o A-.
     Entrada: cedula (str), fecha (str), tipoSangre (str), peso (str)
     Salida: ninguna
     """
@@ -331,7 +329,9 @@ def mostrarInfoDonador(cedula, fecha, tipoSangre, peso):
     fila += 1
     lugaresLista = obtenerLugaresDonacion(cedula)   #retorna la lista de centros segun la provincia
     lugaresTexto = ", ".join(lugaresLista)          #.join() une la lista en un solo string separado por ", "
-    msgProvincia = ("Dado que usted nacio en la provincia de: " + cedula[0] + ", usted podria donar en: " + lugaresTexto + ".")
+    codigoProv   = cedula[0]                        #primer digito de la cedula = codigo de provincia
+    nombreProv   = nombresProvincia.get(codigoProv, "provincia " + codigoProv)  #.get() con valor por defecto
+    msgProvincia = ("Dado que usted nacio en la provincia de: " + nombreProv + ", usted podria donar en: " + lugaresTexto + ".")
     tk.Label(marcoInfo, text=msgProvincia, wraplength=400, justify="left").grid(
         row=fila, column=0, columnspan=2, sticky="w", padx=10)
     fila += 1
@@ -503,9 +503,6 @@ def eliminarDonador(baseDatos):
 def insertarLugarDonacion():
     """
     Funcionalidad: Abre una ventana que permite insertar un nuevo lugar de donacion
-                   para una provincia seleccionada. Antes de insertar verifica que
-                   el lugar no este ya registrado en esa provincia.
-                   Los datos se leen y modifican del diccionario global provinciasDonacion.
     Entrada: ninguna
     Salida: ninguna
     """
@@ -638,9 +635,7 @@ def calcularEdad(fecha):
 def generarPlantillaHTML(titulo, filas, columnas):
     """
     Funcionalidad: Genera el contenido HTML5 completo de un reporte de donadores.
-    Entrada: titulo (str) titulo del reporte,
-             filas (lista de listas) cada sublista es una fila de datos,
-             columnas (lista de str) nombres de las columnas de la tabla
+    Entrada: titulo (str) titulo del reporte, filas (lista de listas) cada sublista es una fila de datos, columnas (lista de str) nombres de las columnas de la tabla
     Salida: string con el HTML completo
     """
     ahora = datetime.datetime.now()                 #datetime.datetime.now() trae fecha y hora actual del sistema
@@ -651,7 +646,7 @@ def generarPlantillaHTML(titulo, filas, columnas):
         for celda in fila:
             filasHTML = filasHTML + "            <td>" + str(celda) + "</td>\n"
         filasHTML = filasHTML + "        </tr>\n"
-      encabezadosHTML = ""
+    encabezadosHTML = ""
     for col in columnas:
         encabezadosHTML = encabezadosHTML + "            <th>" + col + "</th>\n" #para encabezadfos
     html = ("<!DOCTYPE html>\n"
@@ -703,9 +698,7 @@ def guardarHTML(contenidoHTML, nombreArchivo):
 
 def reporteDonantePorProvincia(baseDatos):
     """
-    Funcionalidad: Abre una ventana con un combobox de provincia. Al generar el reporte,
-                   filtra los donantes activos de esa provincia (segun el primer digito de
-                   la cedula), los ordena por nombre completo y genera un archivo HTML5.
+    Funcionalidad: Abre una ventana con un combobox de provincia, filtra los donantes activos de esa provincia
     Entrada: baseDatos (lista de diccionarios)
     Salida: ninguna
     """
@@ -786,9 +779,7 @@ def reporteDonantePorProvincia(baseDatos):
  
 def reportePorRangoEdad(baseDatos):
     """
-    Funcionalidad: Abre una ventana con dos cajas de texto para edad inicial y final.
-                   La segunda caja se activa solo si la primera tiene un valor valido.
-                   Filtra donantes activos dentro del rango (18-65 anos) y genera HTML5.
+    Funcionalidad: Abre una ventana con dos cajas de texto para edad inicial y final. Filtra donantes activos dentro del rango (18-65 anos) y genera HTML.
     Entrada: baseDatos (lista de diccionarios)
     Salida: ninguna
     """
@@ -837,6 +828,68 @@ def reportePorRangoEdad(baseDatos):
         entryEdadFinal.delete(0, tk.END)
  
     entryEdadInicial.bind("<FocusOut>", validarEdadInicial) #FocusOut usa la funcion cuando el usuario sale del campo
+
+    def generarReporte():
+        """
+        Funcionalidad: Valida los rangos ingresados, filtra los donantes activos dentro del rango de edad y genera el HTML5.
+        Entrada: ninguna (lee entryEdadInicial y entryEdadFinal)
+        Salida: ninguna
+        """
+        textoInicial = entryEdadInicial.get().strip()
+        textoFinal   = entryEdadFinal.get().strip()
+        if textoInicial == "":
+            messagebox.showerror("Error", "Debe ingresar al menos la edad inicial.")
+            entryEdadInicial.focus()
+            return
+        if not re.match(r'^\d+$', textoInicial):
+            messagebox.showerror("Error", "La edad inicial debe ser un numero entero.")
+            entryEdadInicial.focus()
+            return
+        edadInicial = int(textoInicial)
+        if edadInicial < 18 or edadInicial > 65:
+            messagebox.showerror("Error", "La edad inicial debe estar entre 18 y 65 anos.")
+            entryEdadInicial.focus()
+            return
+        #La edad final es opcional; si se dejo vacia se usa solo la edad inicial como filtro exacto
+        if textoFinal == "":
+            edadFinal = edadInicial  #rango de un solo punto
+        else:
+            if not re.match(r'^\d+$', textoFinal):
+                messagebox.showerror("Error", "La edad final debe ser un numero entero.")
+                entryEdadFinal.focus()
+                return
+            edadFinal = int(textoFinal)
+            if edadFinal < 18 or edadFinal > 65:
+                messagebox.showerror("Error", "La edad final debe estar entre 18 y 65 anos.")
+                entryEdadFinal.focus()
+                return
+            if edadFinal < edadInicial:
+                messagebox.showerror("Error", "La edad final no puede ser menor que la edad inicial.")
+                entryEdadFinal.focus()
+                return
+        donantes = []
+        for d in baseDatos:
+            if d.get("estado", 1) == 1:
+                edad = calcularEdad(d["fecha"])
+                if edad >= edadInicial and edad <= edadFinal:  #filtra dentro del rango inclusivo
+                    donantes.append(d)
+        filas = []
+        for d in donantes:
+            filas.append([d["cedula"], d["nombre"], d["fecha"], d["telefono"], d["correo"]])
+        columnas = ["Cedula", "Nombre Completo", "Fecha de Nacimiento", "Telefono", "Correo"]
+        titulo = "Donantes por rango de edad: " + str(edadInicial) + " a " + str(edadFinal) + " anos"
+        html   = generarPlantillaHTML(titulo, filas, columnas)
+        ruta   = guardarHTML(html, "donantes_edad_" + str(edadInicial) + "_" + str(edadFinal))
+        if ruta != None:
+            labelResultado.config(text="Reporte creado satisfactoriamente.\nArchivo: " + ruta, fg="green")
+        else:
+            labelResultado.config(text="Reporte no creado.", fg="red")
+
+    marcoBotones = tk.Frame(marcoReporte)
+    marcoBotones.grid(row=5, column=0, columnspan=3, pady=8)
+    tk.Button(marcoBotones, text="Generar reporte", width=16, command=generarReporte).pack(side="left", padx=6)
+    tk.Button(marcoBotones, text="Regresar", width=12, command=ventanaReporte.destroy).pack(side="left", padx=6)
+
 def reportePorTipoSangreProvincia(baseDatos):
     """
     Funcionalidad: Abre una ventana con un combobox de tipo de sangre y otro de provincia. Al generar el reporte, filtra los donantes activos que coincidan con ambos criterios y genera un archivo HTML5.
@@ -970,10 +1023,10 @@ def reporteListaCompleta(baseDatos):
     marcoBotones.grid(row=2, column=0, pady=8)
     tk.Button(marcoBotones, text="Regresar", width=12,
               command=ventanaReporte.destroy).pack() #cierra ventana y vuelve al submenu
+    
 def reporteMujeresONegativo(baseDatos):
     """
     Funcionalidad: Genera automaticamente el reporte de mujeres activas con tipo de sangre O- y menores de 45 anos, ordenadas por edad ascendente.
-    Importante: mujeres O- con embarazo pueden tener complicaciones si el bebe es Rh+.
     Entrada: baseDatos (lista de diccionarios)
     Salida: ninguna
     """
@@ -1029,7 +1082,6 @@ def reporteMujeresONegativo(baseDatos):
     marcoBotones = tk.Frame(marcoReporte)
     marcoBotones.grid(row=2, column=0, pady=8)
     tk.Button(marcoBotones, text="Regresar", width=12, command=ventanaReporte.destroy).pack() #cierra ventana y vuelve al submenu
-
 
 def reporteAQuienPuedeDona(baseDatos):
     """
@@ -1199,7 +1251,6 @@ def reporteDeQuienPuedeRecibir(baseDatos):
     tk.Button(marcoBotones, text="Generar reporte", width=16, command=generarReporte).pack(side="left", padx=6)
     tk.Button(marcoBotones, text="Regresar", width=12, command=ventanaReporte.destroy).pack(side="left", padx=6)
 
-
 def reporteDonantesNoActivos(baseDatos):
     """
     Funcionalidad: Genera automaticamente el reporte de todos los donantes con estado 0 (inactivos), mostrando la justificacion completa en texto, no el numero de codigo. Genera un archivo HTML5.
@@ -1250,7 +1301,6 @@ def reporteDonantesNoActivos(baseDatos):
     marcoBotones.grid(row=2, column=0, pady=8)
     tk.Button(marcoBotones, text="Regresar", width=12, command=ventanaReporte.destroy).pack()
 
-
 def reporteLugaresDonacion(baseDatos):
     """
     Funcionalidad: Genera automaticamente el reporte de lugares de donacion, ordenado por provincia ascendente segun el Registro Civil del TSE. Muestra la cantidad de donadores (activos e inactivos) y los recintos registrados para cada provincia.
@@ -1262,11 +1312,9 @@ def reporteLugaresDonacion(baseDatos):
     ventanaReporte.resizable(False, False)
     marcoReporte = tk.Frame(ventanaReporte, padx=20, pady=15)
     marcoReporte.pack()
-
     tk.Label(marcoReporte, text="Lugares de Donacion", font=("Arial", 14, "bold")).grid(row=0, column=0, pady=(0, 12))
     labelResultado = tk.Label(marcoReporte, text="", wraplength=380, justify="left")
     labelResultado.grid(row=1, column=0, sticky="w", pady=4)
-
     def generarReporte():
         """
         Funcionalidad: Cuenta los donadores por provincia (activos e inactivos), obtiene los recintos del diccionario global provinciasDonacion, ordena las provincias con bubble sort ascendente y genera el HTML5.
@@ -1285,7 +1333,6 @@ def reporteLugaresDonacion(baseDatos):
         codigosOrdenados = []
         for codigo in nombresProvincia:
             codigosOrdenados.append(codigo)
-
         i = 0
         while i < len(codigosOrdenados) - 1:
             j = 0
@@ -1296,7 +1343,6 @@ def reporteLugaresDonacion(baseDatos):
                     codigosOrdenados[j + 1] = temp
                 j += 1
             i += 1
-
         filas = []
         for codigo in codigosOrdenados:
             nombreProv = nombresProvincia.get(codigo, "Desconocida")
@@ -1305,7 +1351,6 @@ def reporteLugaresDonacion(baseDatos):
             #.join() une la lista en un solo string separado por ", "
             recintosTexto = ", ".join(recintos) if len(recintos) > 0 else "Sin recintos registrados"
             filas.append([nombreProv, str(cantidad), recintosTexto])
-
         columnas = ["Provincia", "Cantidad de Donadores Registrados", "Recintos Posibles"]
         html = generarPlantillaHTML("Lugares de Donacion por Provincia", filas, columnas)
         ruta = guardarHTML(html, "lugares_donacion")
@@ -1313,154 +1358,468 @@ def reporteLugaresDonacion(baseDatos):
             labelResultado.config(text="Reporte creado satisfactoriamente.\nArchivo: " + ruta, fg="green")
         else:
             labelResultado.config(text="Reporte no creado.", fg="red")
-
     generarReporte()
     marcoBotones = tk.Frame(marcoReporte)
     marcoBotones.grid(row=2, column=0, pady=8)
     tk.Button(marcoBotones, text="Regresar", width=12, command=ventanaReporte.destroy).pack()
+
+def guardarBD(baseDatos, rutaArchivo="baseDatos.bin"):
+    """
+    Funcionalidad: Guarda la lista de donadores en un archivo binario en disco (memoria secundaria).
+    Entrada: baseDatos (lista de diccionarios), rutaArchivo (str) nombre del archivo
+    Salida: True si se guardo correctamente, False si hubo error
+    """
+    import pickle   #pickle permite serializar y guardar estructuras de Python en binario
+    try:
+        archivo = open(rutaArchivo, "wb")  #"wb" = write binary, crea o sobreescribe el archivo
+        pickle.dump(baseDatos, archivo)    #dump() serializa el objeto y lo escribe en el archivo
+        archivo.close()
+        return True
+    except:
+        return False
+
+def cargarBD(rutaArchivo="baseDatos.bin"):
+    """
+    Funcionalidad: Carga la base de datos de donadores desde el archivo binario en disco.
+    Entrada: rutaArchivo (str) nombre del archivo
+    Salida: lista de diccionarios si el archivo existe, None si no existe o hay error
+    """
+    import pickle
+    import os
+    if not os.path.exists(rutaArchivo):   #os.path.exists() verifica si el archivo existe antes de intentar abrirlo
+        return None
+    try:
+        archivo    = open(rutaArchivo, "rb")  #"rb" = read binary
+        baseDatos  = pickle.load(archivo)     #load() deserializa el objeto desde el archivo
+        archivo.close()
+        return baseDatos
+    except:
+        return None
+
+def guardarLugares(diccionarioLugares, rutaArchivo="lugares.bin"):
+    """
+    Funcionalidad: Guarda el diccionario de lugares de donacion en un archivo binario.
+    Entrada: diccionarioLugares (dict), rutaArchivo (str)
+    Salida: True si se guardo correctamente, False si hubo error
+    """
+    import pickle
+    try:
+        archivo = open(rutaArchivo, "wb")
+        pickle.dump(diccionarioLugares, archivo)
+        archivo.close()
+        return True
+    except:
+        return False
+
+def cargarLugares(rutaArchivo="lugares.bin"):
+    """
+    Funcionalidad: Carga el diccionario de lugares desde el archivo binario si existe.
+    Entrada: rutaArchivo (str)
+    Salida: diccionario si el archivo existe, None si no existe o hay error
+    """
+    import pickle
+    import os
+    if not os.path.exists(rutaArchivo):
+        return None
+    try:
+        archivo  = open(rutaArchivo, "rb")
+        lugares  = pickle.load(archivo)
+        archivo.close()
+        return lugares
+    except:
+        return None
+
+def actualizarDonador(baseDatos):
+    """
+    Funcionalidad: Abre una ventana que solicita la cedula del donador a actualizar.
+    Entrada: baseDatos (lista de diccionarios)
+    Salida: baseDatos actualizada
+    """
+    resultado = {"bd": baseDatos}   #diccionario para poder modificar baseDatos desde las funciones internas
+
+    ventanaActualizar = tk.Toplevel()
+    ventanaActualizar.title("Actualizar Donador")
+    ventanaActualizar.resizable(False, False)
+    marcoActualizar = tk.Frame(ventanaActualizar, padx=20, pady=15)
+    marcoActualizar.pack()
+
+    tk.Label(marcoActualizar, text="Actualizar Donador", font=("Arial", 14, "bold")).grid(
+        row=0, column=0, columnspan=3, pady=(0, 12))
+
+    #Fila de cedula para buscar
+    tk.Label(marcoActualizar, text="Cedula", anchor="w", width=18).grid(row=1, column=0, sticky="w", pady=4)
+    entryCedulaBuscar = tk.Entry(marcoActualizar, width=20)
+    entryCedulaBuscar.grid(row=1, column=1, sticky="w", pady=4)
+    tk.Label(marcoActualizar, text="Ej: 1-2345-6789", fg="gray").grid(row=1, column=2, sticky="w", padx=8)
+    tk.Button(marcoActualizar, text="Buscar", width=10,
+              command=lambda: buscarParaActualizar()).grid(row=1, column=3, padx=8)
+
+    tk.Frame(marcoActualizar, height=2, bd=1, relief="sunken").grid(
+        row=2, column=0, columnspan=4, sticky="ew", pady=8)
+
+    #Marco donde aparece el formulario de edicion despues de buscar
+    marcoFormulario = tk.Frame(marcoActualizar)
+    marcoFormulario.grid(row=3, column=0, columnspan=4, sticky="w")
+
+    def buscarParaActualizar():
+        """
+        Funcionalidad: Valida la cedula, busca en la BD y carga el formulario de edicion si la encuentra.
+        Entrada: ninguna (lee entryCedulaBuscar)
+        Salida: ninguna
+        """
+        cedula = entryCedulaBuscar.get().strip()
+        if validarCedula(cedula) == False:
+            messagebox.showerror("Error", "Cedula invalida. Use el formato #-####-####")
+            return
+        donadorEncontrado = None
+        for donador in resultado["bd"]:
+            if donador["cedula"] == cedula:
+                donadorEncontrado = donador
+                break  #detiene el loop al encontrar la cedula
+        if donadorEncontrado == None:
+            messagebox.showinfo("No encontrado",
+                "La persona con el numero de cedula: " + cedula +
+                " no esta registrado en la base de datos del Banco de Sangre aun.")
+            return
+        mostrarFormularioActualizar(donadorEncontrado)
+
+    def mostrarFormularioActualizar(donador):
+        """
+        Funcionalidad: Construye el formulario de edicion dentro de marcoFormulario con los datos actuales del donador. La cedula se muestra en modo solo lectura.
+        Entrada: donador (dict) con los datos del donador a editar
+        Salida: ninguna
+        """
+        for widget in marcoFormulario.winfo_children():  #limpia el marco antes de construir el formulario
+            widget.destroy()
+
+        #Cedula en solo lectura (no se puede editar)
+        tk.Label(marcoFormulario, text="Cedula", anchor="w", width=18).grid(row=0, column=0, sticky="w", pady=4)
+        entryCedulaRO = tk.Entry(marcoFormulario, width=20, state="disabled",
+                                 disabledforeground="black", disabledbackground="#f0f0f0")  #disabledforeground muestra el texto legible aunque este deshabilitado
+        entryCedulaRO.grid(row=0, column=1, sticky="w", pady=4)
+        entryCedulaRO.config(state="normal")
+        entryCedulaRO.insert(0, donador["cedula"])
+        entryCedulaRO.config(state="disabled")  #se deshabilita de nuevo para que no sea editable
+        tk.Label(marcoFormulario, text="Solo lectura", fg="gray").grid(row=0, column=2, sticky="w", padx=8)
+
+        #Nombre
+        tk.Label(marcoFormulario, text="Nombre Completo", anchor="w", width=18).grid(row=1, column=0, sticky="w", pady=4)
+        entryNombreAct = tk.Entry(marcoFormulario, width=30)
+        entryNombreAct.grid(row=1, column=1, columnspan=2, sticky="w", pady=4)
+        entryNombreAct.insert(0, donador.get("nombre", ""))  #.insert(0, ...) rellena el campo con el valor actual
+
+        #Fecha de nacimiento
+        tk.Label(marcoFormulario, text="Fecha de nacimiento", anchor="w", width=18).grid(row=2, column=0, sticky="w", pady=4)
+        entryFechaAct = tk.Entry(marcoFormulario, width=20)
+        entryFechaAct.grid(row=2, column=1, sticky="w", pady=4)
+        entryFechaAct.insert(0, donador.get("fecha", ""))
+        tk.Label(marcoFormulario, text="DD/MM/AAAA", fg="gray").grid(row=2, column=2, sticky="w", padx=8)
+
+        #Tipo de sangre
+        listaTipos = list(tiposSangre)
+        tk.Label(marcoFormulario, text="Tipo de sangre", anchor="w", width=18).grid(row=3, column=0, sticky="w", pady=4)
+        comboSangreAct = ttk.Combobox(marcoFormulario, values=listaTipos, state="readonly", width=8)
+        comboSangreAct.grid(row=3, column=1, sticky="w", pady=4)
+        tipoActual = donador.get("tipoSangre", "")
+        if tipoActual in listaTipos:
+            comboSangreAct.set(tipoActual)  #.set() preselecciona el valor actual en el combobox
+
+        #Sexo
+        varSexoAct = tk.IntVar()
+        sexoActual = donador.get("sexo", "Masculino")
+        if sexoActual == "Masculino":
+            varSexoAct.set(1)
+        else:
+            varSexoAct.set(2)
+        tk.Label(marcoFormulario, text="Sexo", anchor="w", width=18).grid(row=4, column=0, sticky="w", pady=4)
+        marcoSexoAct = tk.Frame(marcoFormulario)
+        marcoSexoAct.grid(row=4, column=1, sticky="w")
+        tk.Radiobutton(marcoSexoAct, text="Masculino", variable=varSexoAct, value=1).pack(anchor="w")
+        tk.Radiobutton(marcoSexoAct, text="Femenino",  variable=varSexoAct, value=2).pack(anchor="w")
+
+        #Peso
+        tk.Label(marcoFormulario, text="Peso", anchor="w", width=18).grid(row=5, column=0, sticky="w", pady=4)
+        entryPesoAct = tk.Entry(marcoFormulario, width=10)
+        entryPesoAct.grid(row=5, column=1, sticky="w", pady=4)
+        entryPesoAct.insert(0, str(donador.get("peso", "")))
+        tk.Label(marcoFormulario, text="En kg. Mayor a 50, menor a 120", fg="gray").grid(row=5, column=2, sticky="w", padx=8)
+
+        #Telefono
+        tk.Label(marcoFormulario, text="Telefono", anchor="w", width=18).grid(row=6, column=0, sticky="w", pady=4)
+        entryTelefonoAct = tk.Entry(marcoFormulario, width=20)
+        entryTelefonoAct.grid(row=6, column=1, sticky="w", pady=4)
+        entryTelefonoAct.insert(0, donador.get("telefono", ""))
+
+        #Correo
+        tk.Label(marcoFormulario, text="Correo", anchor="w", width=18).grid(row=7, column=0, sticky="w", pady=4)
+        entryCorreoAct = tk.Entry(marcoFormulario, width=30)
+        entryCorreoAct.grid(row=7, column=1, columnspan=2, sticky="w", pady=4)
+        entryCorreoAct.insert(0, donador.get("correo", ""))
+
+        tk.Frame(marcoFormulario, height=2, bd=1, relief="sunken").grid(
+            row=8, column=0, columnspan=3, sticky="ew", pady=10)
+
+        #Botones de confirmar y regresar
+        marcoBotonesAct = tk.Frame(marcoFormulario)
+        marcoBotonesAct.grid(row=9, column=0, columnspan=3, pady=5)
+        tk.Button(marcoBotonesAct, text="Confirmar", width=12,
+                  command=lambda: confirmarActualizacion(
+                      donador, entryNombreAct, entryFechaAct, comboSangreAct,
+                      varSexoAct, entryPesoAct, entryTelefonoAct, entryCorreoAct)
+                  ).pack(side="left", padx=6)
+        tk.Button(marcoBotonesAct, text="Regresar", width=12,
+                  command=ventanaActualizar.destroy).pack(side="left", padx=6)
+
+    def confirmarActualizacion(donador, entryNombreAct, entryFechaAct, comboSangreAct,
+                               varSexoAct, entryPesoAct, entryTelefonoAct, entryCorreoAct):
+        """
+        Funcionalidad: Valida todos los campos del formulario de actualizacion. Si son correctos actualiza el donador en la BD, guarda en disco y regresa al menu principal. Si no, muestra el mensaje correspondiente.
+        Entrada: donador (dict), widgets del formulario
+        Salida: ninguna
+        """
+        nombre     = entryNombreAct.get().strip()
+        fecha      = entryFechaAct.get().strip()
+        tipoSangre = comboSangreAct.get().strip()
+        peso       = entryPesoAct.get().strip()
+        telefono   = entryTelefonoAct.get().strip()
+        correo     = entryCorreoAct.get().strip()
+        #Todos los campos son requeridos
+        if nombre == "" or fecha == "" or tipoSangre == "" or peso == "" or telefono == "" or correo == "":
+            messagebox.showerror("Error", "Todos los campos son requeridos.")
+            return
+        if validarNombre(nombre) == False:
+            messagebox.showerror("Error", "Nombre invalido. Solo se permiten letras y espacios.")
+            entryNombreAct.focus()
+            return
+        if validarFecha(fecha) == False:
+            messagebox.showerror("Error", "Fecha invalida. Use el formato DD/MM/AAAA.")
+            entryFechaAct.focus()
+            return
+        if validarPeso(peso) == False:
+            messagebox.showerror("Error", "Peso invalido. Debe ser mayor a 50 y menor a 120 kg.")
+            entryPesoAct.focus()
+            return
+        if validarTelefono(telefono) == False:
+            messagebox.showerror("Error", "Telefono invalido. Use el formato ####-####\nEl primer digito no puede ser 0, 1, 3 ni 5.")
+            entryTelefonoAct.focus()
+            return
+        if validarCorreo(correo) == False:
+            messagebox.showerror("Error", "Correo invalido. Debe pertenecer a uno de los dominios:\ncostarricense.cr, racsa.go.cr, ccss.sa.cr, gmail.com")
+            entryCorreoAct.focus()
+            return
+        if not messagebox.askyesno("Confirmar", "Desea guardar los cambios del donador " + donador["nombre"] + "?"):  #askyesno retorna True si confirma
+            messagebox.showinfo("Sin cambios", "Datos No actualizados.")
+            return
+        #Actualizar los datos del donador en el diccionario (modifica el objeto referenciado en la lista)
+        donador["nombre"]     = nombre
+        donador["fecha"]      = fecha
+        donador["tipoSangre"] = tipoSangre
+        donador["sexo"]       = "Masculino" if varSexoAct.get() == 1 else "Femenino"
+        donador["peso"]       = float(peso)
+        donador["telefono"]   = telefono
+        donador["correo"]     = correo
+        guardarBD(resultado["bd"])  #guarda la BD actualizada en memoria secundaria
+        messagebox.showinfo("Exito", "Datos actualizados correctamente.")
+        ventanaActualizar.destroy() #cierra ventana y regresa al menu principal
+
+    entryCedulaBuscar.focus()
+    ventanaActualizar.wait_window()  #espera a que esta ventana se cierre antes de continuar
+    return resultado["bd"]
+
+def abrirVentanaInsertar(baseDatos):
+    """
+    Funcionalidad: Abre la ventana de insercion de donador. Valida todos los campos, registra al donador en la base de datos, guarda en disco y muestra la informacion del nuevo donador.
+    Entrada: baseDatos (lista de diccionarios)
+    Salida: baseDatos actualizada
+    """
+    resultado = {"bd": baseDatos}  #diccionario para poder modificar baseDatos desde las funciones internas
+
+    ventanaIns = tk.Toplevel()
+    ventanaIns.title("Insertar Donador")
+    ventanaIns.resizable(False, False)
+    marcoIns = tk.Frame(ventanaIns, padx=20, pady=15)
+    marcoIns.pack()
+
+    #Titulo del formulario
+    tk.Label(marcoIns, text="Insertar Donador", font=("Arial", 14, "bold")).grid(
+        row=0, column=0, columnspan=3, pady=(0, 12))
+
+    #Fila de cedula
+    tk.Label(marcoIns, text="Cedula", anchor="w", width=18).grid(row=1, column=0, sticky="w", pady=4)
+    entryCedulaIns = tk.Entry(marcoIns, width=20)
+    entryCedulaIns.grid(row=1, column=1, sticky="w", pady=4)
+    tk.Label(marcoIns, text="Ej: 1-2345-6789", fg="gray").grid(row=1, column=2, sticky="w", padx=8)
+
+    #Fila de nombre
+    tk.Label(marcoIns, text="Nombre Completo", anchor="w", width=18).grid(row=2, column=0, sticky="w", pady=4)
+    entryNombreIns = tk.Entry(marcoIns, width=30)
+    entryNombreIns.grid(row=2, column=1, columnspan=2, sticky="w", pady=4)
+
+    #Fila de fecha de nacimiento
+    tk.Label(marcoIns, text="Fecha de nacimiento", anchor="w", width=18).grid(row=3, column=0, sticky="w", pady=4)
+    entryFechaIns = tk.Entry(marcoIns, width=20)
+    entryFechaIns.grid(row=3, column=1, sticky="w", pady=4)
+    tk.Label(marcoIns, text="Ej: 15/06/1990", fg="gray").grid(row=3, column=2, sticky="w", padx=8)
+
+    #Fila de tipo de sangre (leido de la tupla global)
+    tk.Label(marcoIns, text="Tipo de sangre", anchor="w", width=18).grid(row=4, column=0, sticky="w", pady=4)
+    comboSangreIns = ttk.Combobox(marcoIns, values=list(tiposSangre), state="readonly", width=8)  #list() convierte la tupla en lista para el combobox
+    comboSangreIns.grid(row=4, column=1, sticky="w", pady=4)
+    tk.Label(marcoIns, text="Con las opciones: O+, O-, A+, A-, B+, B-, AB+, AB-", fg="gray").grid(row=4, column=2, sticky="w", padx=8)
+
+    #Fila de sexo (Masculino por omision)
+    varSexoIns = tk.IntVar()
+    varSexoIns.set(1)  #1 = Masculino por omision segun el enunciado
+    tk.Label(marcoIns, text="Sexo", anchor="w", width=18).grid(row=5, column=0, sticky="w", pady=4)
+    marcoSexoIns = tk.Frame(marcoIns)
+    marcoSexoIns.grid(row=5, column=1, sticky="w")
+    tk.Radiobutton(marcoSexoIns, text="Masculino", variable=varSexoIns, value=1).pack(anchor="w")
+    tk.Radiobutton(marcoSexoIns, text="Femenino",  variable=varSexoIns, value=2).pack(anchor="w")
+    tk.Label(marcoIns, text="Marcado por omision.", fg="gray").grid(row=5, column=2, sticky="nw", padx=8, pady=4)
+
+    #Fila de peso
+    tk.Label(marcoIns, text="Peso", anchor="w", width=18).grid(row=6, column=0, sticky="w", pady=4)
+    entryPesoIns = tk.Entry(marcoIns, width=10)
+    entryPesoIns.grid(row=6, column=1, sticky="w", pady=4)
+    tk.Label(marcoIns, text="En kg. Mayor a 50, menor a 120", fg="gray").grid(row=6, column=2, sticky="w", padx=8)
+
+    #Fila de telefono
+    tk.Label(marcoIns, text="Telefono", anchor="w", width=18).grid(row=7, column=0, sticky="w", pady=4)
+    entryTelefonoIns = tk.Entry(marcoIns, width=20)
+    entryTelefonoIns.grid(row=7, column=1, sticky="w", pady=4)
+    tk.Label(marcoIns, text="Ej: 8765-4321", fg="gray").grid(row=7, column=2, sticky="w", padx=8)
+
+    #Fila de correo
+    tk.Label(marcoIns, text="Correo", anchor="w", width=18).grid(row=8, column=0, sticky="w", pady=4)
+    entryCorreoIns = tk.Entry(marcoIns, width=30)
+    entryCorreoIns.grid(row=8, column=1, columnspan=2, sticky="w", pady=4)
+
+    tk.Frame(marcoIns, height=2, bd=1, relief="sunken").grid(
+        row=9, column=0, columnspan=3, sticky="ew", pady=10)
+
+    def registrarIns():
+        """
+        Funcionalidad: Valida todos los campos y si son correctos agrega el donador a la BD, guarda en disco y muestra la informacion del nuevo donador.
+        Entrada: ninguna (lee los widgets del formulario)
+        Salida: ninguna
+        """
+        cedula     = entryCedulaIns.get().strip()
+        nombre     = entryNombreIns.get().strip()
+        fecha      = entryFechaIns.get().strip()
+        tipoSangre = comboSangreIns.get().strip()
+        peso       = entryPesoIns.get().strip()
+        telefono   = entryTelefonoIns.get().strip()
+        correo     = entryCorreoIns.get().strip()
+        sexo       = varSexoIns.get()  #1 = Masculino, 2 = Femenino
+        if cedula == "" or nombre == "" or fecha == "" or tipoSangre == "" or peso == "" or telefono == "" or correo == "":
+            messagebox.showerror("Error", "Todos los campos son requeridos.")
+            return
+        if validarCedula(cedula) == False:
+            messagebox.showerror("Error", "Cedula invalida. Use el formato #-####-####\nEl primer digito no puede ser 0.")
+            entryCedulaIns.focus()
+            return
+        #Verificar que la cedula no este ya registrada
+        for d in resultado["bd"]:
+            if d.get("cedula", "") == cedula:
+                messagebox.showerror("Error", "La cedula " + cedula + " ya esta registrada en la base de datos.")
+                entryCedulaIns.focus()
+                return
+        if validarNombre(nombre) == False:
+            messagebox.showerror("Error", "Nombre invalido. Solo se permiten letras y espacios.")
+            entryNombreIns.focus()
+            return
+        if validarFecha(fecha) == False:
+            messagebox.showerror("Error", "Fecha invalida. Use el formato DD/MM/AAAA\nVerifique que el dia, mes y anno sean correctos.")
+            entryFechaIns.focus()
+            return
+        if validarPeso(peso) == False:
+            messagebox.showerror("Error", "Peso invalido. Debe ser mayor a 50 y menor a 120 kg.")
+            entryPesoIns.focus()
+            return
+        if validarTelefono(telefono) == False:
+            messagebox.showerror("Error", "Telefono invalido. Use el formato ####-####\nEl primer digito no puede ser 0, 1, 3 ni 5.")
+            entryTelefonoIns.focus()
+            return
+        if validarCorreo(correo) == False:
+            messagebox.showerror("Error", "Correo invalido. Debe pertenecer a uno de los dominios:\ncostarricense.cr, racsa.go.cr, ccss.sa.cr, gmail.com")
+            entryCorreoIns.focus()
+            return
+        sexoTexto = "Masculino" if sexo == 1 else "Femenino"
+        #Crear el nuevo donador como diccionario segun la estructura de la BD
+        nuevoDonador = {
+            "cedula":       cedula,
+            "nombre":       nombre,
+            "fecha":        fecha,
+            "tipoSangre":   tipoSangre,
+            "sexo":         sexoTexto,
+            "peso":         float(peso),
+            "telefono":     telefono,
+            "correo":       correo,
+            "estado":       1,              #1 = activo por omision segun la estructura de la BD
+            "justificacion": 0              #0 = sin justificacion porque esta activo
+        }
+        resultado["bd"].append(nuevoDonador)
+        guardarBD(resultado["bd"])          #guarda la BD actualizada en memoria secundaria
+        messagebox.showinfo("Registro exitoso",
+            "Donador registrado exitosamente:\n\n"
+            "Cedula: " + cedula + "\n"
+            "Nombre: " + nombre + "\n"
+            "Fecha de nacimiento: " + fecha + "\n"
+            "Tipo sangre: " + tipoSangre + "\n"
+            "Sexo: " + sexoTexto + "\n"
+            "Peso: " + peso + " kg\n"
+            "Telefono: " + telefono + "\n"
+            "Correo: " + correo)
+        mostrarInfoDonador(cedula, fecha, tipoSangre, peso)  #muestra analisis del donador recien registrado
+        limpiarIns()
+
+    def limpiarIns():
+        """
+        Funcionalidad: Limpia todos los campos del formulario de insercion.
+        Entrada: ninguna
+        Salida: ninguna
+        """
+        entryCedulaIns.delete(0, tk.END)
+        entryNombreIns.delete(0, tk.END)
+        entryFechaIns.delete(0, tk.END)
+        comboSangreIns.set("")
+        varSexoIns.set(1)  #regresa a Masculino por omision
+        entryPesoIns.delete(0, tk.END)
+        entryTelefonoIns.delete(0, tk.END)
+        entryCorreoIns.delete(0, tk.END)
+        entryCedulaIns.focus()
+
+    #Botones
+    marcoBotonesIns = tk.Frame(marcoIns)
+    marcoBotonesIns.grid(row=10, column=0, columnspan=3, pady=5)
+    tk.Button(marcoBotonesIns, text="Registrar", width=12, command=registrarIns).pack(side="left", padx=6)
+    tk.Button(marcoBotonesIns, text="Limpiar",   width=12, command=limpiarIns).pack(side="left", padx=6)
+    tk.Button(marcoBotonesIns, text="Regresar",  width=12, command=ventanaIns.destroy).pack(side="left", padx=6)
+
+    entryCedulaIns.focus()
+    ventanaIns.wait_window()  #espera a que esta ventana se cierre antes de continuar
+    return resultado["bd"]
+
 def registrar():
     """
-    Funcionalidad: Valida todos los campos del formulario y registra al donador si son correctos.
-    Entrada: ninguna (lee los widgets globales)
+    Funcionalidad: Funcion de compatibilidad - la logica real esta en abrirVentanaInsertar. Se mantiene para que el codigo heredado que la llame no genere errores.
+    Entrada: ninguna
     Salida: ninguna
     """
-    cedula     = entryCedula.get().strip()      # .get() extrae el texto que el usuario escribio
-    nombre     = entryNombre.get().strip()
-    fecha      = entryFecha.get().strip()
-    tipoSangre = comboSangre.get().strip()      # en el combobox .get() trae la opcion que el usuario selecciono
-    sexo       = varSexo.get()                  # varSexo es una variable especial de tkinter, .get() trae el valor del radio button seleccionado (1 o 2)
-    peso       = entryPeso.get().strip()
-    telefono   = entryTelefono.get().strip()
-    correo     = entryCorreo.get().strip()
-    if cedula == "" or nombre == "" or fecha == "" or tipoSangre == "" or peso == "" or telefono == "" or correo == "":
-        messagebox.showerror("Error", "Todos los campos son requeridos.")    # showerror muestra un popup rojo de error con el mensaje
-        return
-    if validarCedula(cedula) == False:
-        messagebox.showerror("Error", "Cedula invalida. Use el formato #-####-####\nEl primer digito no puede ser 0.")
-        entryCedula.focus()     # .focus() mueve el cursor al campo que tiene el error para que el usuario lo corrija directo
-        return
-    if validarNombre(nombre) == False:
-        messagebox.showerror("Error", "Nombre invalido. Solo se permiten letras y espacios.")
-        entryNombre.focus()
-        return
-    if validarFecha(fecha) == False:
-        messagebox.showerror("Error", "Fecha invalida. Use el formato DD/MM/AAAA\nVerifique que el dia, mes y anno sean correctos.")
-        entryFecha.focus()
-        return
-    if validarPeso(peso) == False:
-        messagebox.showerror("Error", "Peso invalido. Debe ser mayor a 50 y menor a 120 kg.")
-        entryPeso.focus()
-        return
-    if validarTelefono(telefono) == False:
-        messagebox.showerror("Error", "Telefono invalido. Use el formato ####-####\nEl primer digito no puede ser 0, 1, 3 ni 5.")
-        entryTelefono.focus()
-        return
-    if validarCorreo(correo) == False:
-        messagebox.showerror("Error", "Correo invalido. Debe pertenecer a uno de los dominios:\ncostarricense.cr, racsa.go.cr, ccss.sa.cr, gmail.com")
-        entryCorreo.focus()
-        return
-    if sexo == 1:
-        textoSexo = "Masculino"
-    else:
-        textoSexo = "Femenino"
-    mensaje = ("Donador registrado exitosamente:\n\n"
-        "Cedula: " + cedula + "\n"
-        "Nombre: " + nombre + "\n"
-        "Fecha de nacimiento: " + fecha + "\n"
-        "Tipo sangre: " + tipoSangre + "\n"
-        "Sexo: " + textoSexo + "\n"
-        "Peso: " + peso + " kg\n"
-        "Telefono: " + telefono + "\n"
-        "Correo: " + correo)
-    messagebox.showinfo("Registro exitoso", mensaje)    #showinfo muestra un popup normal (sin icono de error)
-    mostrarInfoDonador(cedula, fecha, tipoSangre, peso)
-    limpiar()
+    pass  #no hace nada; usar abrirVentanaInsertar(baseDatos) desde el menu principal
 
 def limpiar():
     """
-    Funcionalidad: Limpia todos los campos del formulario y restablece los valores
+    Funcionalidad: Funcion de compatibilidad - la logica real esta dentro de abrirVentanaInsertar.
     Entrada: ninguna
     Salida: ninguna
     """
-    entryCedula.delete(0, tk.END)       #delete(0, tk.END) borra todo el texto del campo, desde el caracter 0 hasta el final
-    entryNombre.delete(0, tk.END)
-    entryFecha.delete(0, tk.END)
-    comboSangre.set("")                 #en el combobox .set("") limpia la seleccion actual
-    varSexo.set(1)                      #resetea el radio button a Masculino (valor 1)
-    entryPeso.delete(0, tk.END)
-    entryTelefono.delete(0, tk.END)
-    entryCorreo.delete(0, tk.END)
-    entryCedula.focus()                 #devuelve el cursor al primer campo
+    pass  #no hace nada; la funcion limpiarIns() es la version correcta dentro de abrirVentanaInsertar
 
 def regresar():
     """
-    Funcionalidad: Cierra la ventana del formulario.
+    Funcionalidad: Funcion de compatibilidad - la logica real esta dentro de abrirVentanaInsertar.
     Entrada: ninguna
     Salida: ninguna
     """
-    ventana.destroy()   #destroy() cierra y destruye la ventana completamente
-
-#construccion de la ventana principal
-ventana = tk.Tk()                           #Tk() crea la ventana principal, siempre debe haber una sola
-ventana.title("Insertar Donador")           #titulo que aparece en la barra de la ventana
-ventana.resizable(False, False)             #False, False significa que no se puede cambiar el tamanno (ni ancho ni alto)
-#marco principal
-marco = tk.Frame(ventana, padx=20, pady=15) #Frame es un contenedor invisible para organizar los widgets adentro, padx/pady son los margenes internos
-marco.pack()                                #pack() coloca el marco dentro de la ventana (lo hace visible)
-#titulo del formulario
-tk.Label(marco, text="Insertar Donador", font=("Arial", 14, "bold")).grid(  # Label es texto estatico, font define fuente/tamanno/estilo
-    row=0, column=0, columnspan=3, pady=(0, 12))                            # grid lo posiciona en fila 0, columnspan=3 hace que ocupe 3 columnas, pady=(0,12) es margen abajo
-#Fila de cedula
-tk.Label(marco, text="Cedula", anchor="w", width=18).grid(row=1, column=0, sticky="w", pady=4)  # anchor="w" alinea el texto a la izquierda (west), sticky="w" hace lo mismo en el grid
-entryCedula = tk.Entry(marco, width=20)     #Entry es la cajita donde el usuario escribe texto
-entryCedula.grid(row=1, column=1, sticky="w", pady=4)  #grid(row, column) define en que celda de la cuadricula va el widget
-tk.Label(marco, text="Ej: 1-2345-6789", fg="gray").grid(row=1, column=2, sticky="w", padx=8)   #fg="gray" es el color del texto (foreground)
-#Fila de nombre
-tk.Label(marco, text="Nombre Completo", anchor="w", width=18).grid(row=2, column=0, sticky="w", pady=4)
-entryNombre = tk.Entry(marco, width=30)
-entryNombre.grid(row=2, column=1, columnspan=2, sticky="w", pady=4)    #columnspan=2 hace que este entry ocupe dos columnas para que sea mas ancho
-#Fila de fecha de nacimiento
-tk.Label(marco, text="Fecha de nacimiento", anchor="w", width=18).grid(row=3, column=0, sticky="w", pady=4)
-entryFecha = tk.Entry(marco, width=20)
-entryFecha.grid(row=3, column=1, sticky="w", pady=4)
-tk.Label(marco, text="Ej: 15/06/1990", fg="gray").grid(row=3, column=2, sticky="w", padx=8)
-#Fila de tipo de sangre
-listaTiposSangre = list(tiposSangre)        #se convierte la tupla a lista para usarla en el combobox
-tk.Label(marco, text="Tipo de sangre", anchor="w", width=18).grid(row=4, column=0, sticky="w", pady=4)
-comboSangre = ttk.Combobox(marco, values=listaTiposSangre, state="readonly", width=8)  # Combobox es el dropdown, state="readonly" impide que el usuario escriba a mano (solo puede elegir)
-comboSangre.grid(row=4, column=1, sticky="w", pady=4)
-tk.Label(marco, text="Con las opciones: O+, O-, A+, A-, B+, B-, AB+, AB-", fg="gray").grid(row=4, column=2, sticky="w", padx=8)
-#Fila de indicar sexo
-varSexo = tk.IntVar()   #IntVar es una variable especial de tkinter que guarda un entero y esta enlazada a los radio buttons
-varSexo.set(1)          #se inicializa en 1 para que Masculino quede marcado por omision
-tk.Label(marco, text="Sexo", anchor="w", width=18).grid(row=5, column=0, sticky="w", pady=4)
-marcoSexo = tk.Frame(marco)     #Frame extra para agrupar los dos radio buttons juntos en la misma celda
-marcoSexo.grid(row=5, column=1, sticky="w")
-tk.Radiobutton(marcoSexo, text="Masculino", variable=varSexo, value=1).pack(anchor="w")    #Radiobutton es el circulo de seleccion, variable=varSexo los enlaza entre si para que solo uno pueda estar activo
-tk.Radiobutton(marcoSexo, text="Femenino",  variable=varSexo, value=2).pack(anchor="w")    #cuando se elige este, varSexo pasa a valer 2
-tk.Label(marco, text="Marcado por omision.", fg="gray").grid(row=5, column=2, sticky="nw", padx=8, pady=4)  #sticky="nw" ancla el texto arriba a la izquierda (north-west)
-#Fila de peso
-tk.Label(marco, text="Peso", anchor="w", width=18).grid(row=6, column=0, sticky="w", pady=4)
-entryPeso = tk.Entry(marco, width=10)
-entryPeso.grid(row=6, column=1, sticky="w", pady=4)
-tk.Label(marco, text="En kg. Mayor a 50, menor a 120", fg="gray").grid(row=6, column=2, sticky="w", padx=8)
-#Fila de telefono
-tk.Label(marco, text="Telefono", anchor="w", width=18).grid(row=7, column=0, sticky="w", pady=4)
-entryTelefono = tk.Entry(marco, width=20)
-entryTelefono.grid(row=7, column=1, sticky="w", pady=4)
-tk.Label(marco, text="Ej: 8765-4321", fg="gray").grid(row=7, column=2, sticky="w", padx=8)
-#Fila de correo
-tk.Label(marco, text="Correo", anchor="w", width=18).grid(row=8, column=0, sticky="w", pady=4)
-entryCorreo = tk.Entry(marco, width=30)
-entryCorreo.grid(row=8, column=1, columnspan=2, sticky="w", pady=4)
-#Fila de separador
-tk.Frame(marco, height=2, bd=1, relief="sunken").grid(row=9, column=0, columnspan=3, sticky="ew", pady=10)  # Frame con height=2 y relief="sunken" crea una linea horizontal decorativa, sticky="ew" la estira de lado a lado (east-west)
-#Fila de botones
-marcoBotones = tk.Frame(marco)  #otro Frame para agrupar los tres botones en una sola fila
-marcoBotones.grid(row=10, column=0, columnspan=3, pady=5)
-tk.Button(marcoBotones, text="Registrar", width=12, command=registrar).pack(side="left", padx=6)    #command=registrar enlaza el boton a la funcion, se pasa sin parentesis porque no se llama aqui sino cuando se haga clic
-tk.Button(marcoBotones, text="Limpiar",   width=12, command=limpiar).pack(side="left", padx=6)      #side="left" los acomoda de izquierda a derecha dentro del frame
-tk.Button(marcoBotones, text="Regresar",  width=12, command=regresar).pack(side="left", padx=6)
-#Foco inicial en el primer campo
-entryCedula.focus()
-ventana.mainloop()  # mainloop() arranca el "loop" de la ventana, sin esto la ventana se abre y se cierra inmediatamente, este loop espera eventos del usuario (clics, teclas, etc.)
+    pass  #no hace nada; el boton Regresar dentro de abrirVentanaInsertar llama ventanaIns.destroy()
