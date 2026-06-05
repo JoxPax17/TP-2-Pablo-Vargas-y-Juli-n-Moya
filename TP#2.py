@@ -1,6 +1,6 @@
 #Elaborado por Pablo Vargas y Julian Moya
 #Fecha de creacion 23-05-26 6:00 pm
-#Ultima modificacion 04-06-26 11:10
+#Ultima modificacion 04-06-26 11:10 pm
 #Version: 3.14.3
 
 import tkinter as tk
